@@ -1,6 +1,101 @@
 {
-  "name": "Invoice PDFs from Google Sheets",
+  "name": "Create and email PDF invoices from Google Sheets rows",
   "nodes": [
+    {
+      "parameters": {
+        "content": "## Create and email PDF invoices from Google Sheets\n\n### How it works\nFor freelancers and small businesses that keep invoice lines in a Google Sheet. Each row is one line; rows with the same `invoice_number` become one invoice, and only rows with the status `ready` are used.\n\n1. Reads every row of the sheet.\n2. Checks the required fields and groups the lines into one invoice per number. If a row is incomplete or a date isn't `YYYY-MM-DD`, it stops before anything is sent and lists the rows.\n3. Renders each invoice with the verified Dynamic Document API node. The template computes line totals, VAT and the amount due.\n4. Emails the PDF with Gmail and sets the rows to `sent`, so the next run skips them.\n\nIf Gmail fails partway through, the rows stay `ready` and a rerun sends the earlier invoices again. Check your sent folder first.\n\n### Setup\n1. Import the [sample sheet](https://dynamicdocumentapi.com/assets/tutorials/invoices-sheet.csv) into Google Sheets. Keep the date columns as plain text.\n2. Install the community node `@dynamic-document-api/n8n-nodes-dynamic-document-api` (verified, tested with 0.1.1): nodes panel, search **Dynamic Document API**, **Install node**.\n3. In the [dashboard](https://app.dynamicdocumentapi.com/signup), add an invoice template from the gallery and create an API key. A free test key adds a TEST watermark.\n4. Connect Google Sheets, Gmail and Dynamic Document API. Pick your sheet in both Google Sheets nodes and your template in the PDF node. Picking the sheet in **Mark rows as sent** resets it: set **Map Automatically** and match on `row_number` again.\n5. Enter your details in **Set your business details**.\n\n### Customization\nSwap the manual trigger for a Schedule Trigger, or add Google Drive to keep a copy of each PDF. [Step-by-step tutorial](https://dynamicdocumentapi.com/docs/tutorials/invoice-pdfs-google-sheets-n8n)",
+        "height": 780,
+        "width": 580
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        -300
+      ],
+      "id": "a51008aa-3efe-4fba-93e9-61ce37e628b1",
+      "name": "Sticky Note b04112"
+    },
+    {
+      "parameters": {
+        "content": "## 1. Read your details and the sheet\nYour company and bank details, then every row of the sheet. Edit **Set your business details** once.",
+        "height": 400,
+        "width": 740,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -220
+      ],
+      "id": "4492ebf2-8ae7-40af-b51c-c1e3dd1efd61",
+      "name": "Sticky Note ffa5f3"
+    },
+    {
+      "parameters": {
+        "content": "## 2. Build the invoices\nGroups the `ready` rows by invoice number. Stops before sending if a row is incomplete.",
+        "height": 400,
+        "width": 220,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -220
+      ],
+      "id": "88239567-01d9-4351-a1a9-e853bccb2b89",
+      "name": "Sticky Note 27940b"
+    },
+    {
+      "parameters": {
+        "content": "## 3. Create and email the PDFs\nRenders each invoice from your template and sends it as an attachment.",
+        "height": 400,
+        "width": 480,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        980,
+        -220
+      ],
+      "id": "a1ceed8d-fd5a-45ee-9a32-5e12032b4440",
+      "name": "Sticky Note f62837"
+    },
+    {
+      "parameters": {
+        "content": "## 4. Mark the rows as sent\nMatches each row on `row_number`. After you pick the sheet, set **Map Automatically** and `row_number` again.",
+        "height": 400,
+        "width": 480,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        -220
+      ],
+      "id": "33423cdb-70da-4812-a470-df2a1dd5544f",
+      "name": "Sticky Note fb9f87"
+    },
+    {
+      "parameters": {
+        "content": "## Test with your own address\nThe sample sheet uses `example.com` addresses. Put your own address in **To** for the first run.",
+        "height": 220,
+        "width": 220,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1240,
+        200
+      ],
+      "id": "696a7cfb-e697-459a-973f-ac4a6d2613a4",
+      "name": "Sticky Note 4d5b1a"
+    },
     {
       "parameters": {},
       "type": "n8n-nodes-base.manualTrigger",
@@ -9,7 +104,103 @@
         0,
         0
       ],
-      "name": "When clicking ‘Execute workflow’"
+      "name": "When clicking ‘Execute workflow’",
+      "id": "a9e3118b-cefa-47c5-aca1-7489baa081b1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d3743a7b-3f48-449c-b2e0-acf9beab23c3",
+              "name": "seller_name",
+              "value": "Brambleworth Design Studio",
+              "type": "string"
+            },
+            {
+              "id": "45b465a3-8374-4ece-a169-5a51df85dbea",
+              "name": "seller_vat_id",
+              "value": "IE1234567T",
+              "type": "string"
+            },
+            {
+              "id": "123f455a-f97e-455e-9bc0-501d0a8a32b2",
+              "name": "seller_street",
+              "value": "Unit 4, Tannery Yard",
+              "type": "string"
+            },
+            {
+              "id": "51e888cd-6015-4edb-828f-a6d300423a63",
+              "name": "seller_city",
+              "value": "Dublin",
+              "type": "string"
+            },
+            {
+              "id": "6b724600-6eb2-42f4-b2e9-ee26c40caefc",
+              "name": "seller_postcode",
+              "value": "D08 VF8H",
+              "type": "string"
+            },
+            {
+              "id": "96010052-3178-40f1-8b2b-b0f23860c7bf",
+              "name": "seller_country",
+              "value": "IE",
+              "type": "string"
+            },
+            {
+              "id": "c17c8983-a33b-490d-9f71-61b11828a9b5",
+              "name": "seller_contact_name",
+              "value": "Accounts team",
+              "type": "string"
+            },
+            {
+              "id": "ce831aa8-e96b-47b1-8000-6f78a64b35e5",
+              "name": "seller_email",
+              "value": "accounts@brambleworth.example.com",
+              "type": "string"
+            },
+            {
+              "id": "fe3433da-27d9-45f5-b52a-1f2ee4dcb4ad",
+              "name": "iban",
+              "value": "IE29AIBK93115212345678",
+              "type": "string"
+            },
+            {
+              "id": "dae9ad77-6899-49b1-857d-ddecba37e51b",
+              "name": "bic",
+              "value": "AIBKIE2D",
+              "type": "string"
+            },
+            {
+              "id": "77ff4afd-5694-482a-9435-c86b8a0f4f66",
+              "name": "currency",
+              "value": "EUR",
+              "type": "string"
+            },
+            {
+              "id": "031afc3c-6049-4f77-bec1-bd86fb095bcd",
+              "name": "payment_terms",
+              "value": "30 days net",
+              "type": "string"
+            },
+            {
+              "id": "2f95f8e5-461b-44b4-bbfb-12148f06717c",
+              "name": "customer_country",
+              "value": "IE",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "name": "Set your business details",
+      "id": "1dba1bc4-16d6-4200-bec3-ce13dbbb1cc7",
+      "position": [
+        260,
+        0
+      ]
     },
     {
       "parameters": {
@@ -33,7 +224,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        224,
+        520,
         0
       ],
       "name": "Read invoice rows",
@@ -42,19 +233,21 @@
           "id": "",
           "name": "Google Sheets account"
         }
-      }
+      },
+      "id": "2ee432bb-9ff7-4c90-8274-d5c1a59dafaa"
     },
     {
       "parameters": {
-        "jsCode": "// n8n Code node, mode \"Run Once for All Items\".\n// Turns the sheet's rows (one row per invoice line) into one item per invoice, in the\n// EN 16931 invoice model the gallery's invoice templates read. Only rows with status \"ready\".\n\nconst seller = {\n  name: \"Brambleworth Design Studio\",\n  vat_id: \"IE1234567T\",\n  address: { line1: \"Unit 4, Tannery Yard\", city: \"Dublin\", postcode: \"D08 VF8H\", country: \"IE\" },\n  contact: { name: \"Accounts team\", email: \"accounts@brambleworth.example.com\" },\n};\nconst bank = { account_id: \"IE29AIBK93115212345678\", account_name: seller.name, bic: \"AIBKIE2D\" };\n\nconst invoices = new Map();\nfor (const { json: row } of $input.all()) {\n  if (String(row.status).trim().toLowerCase() !== \"ready\") continue;\n\n  const number = String(row.invoice_number).trim();\n  if (!invoices.has(number)) {\n    invoices.set(number, {\n      invoice: {\n        number,\n        issue_date: row.issue_date,\n        due_date: row.due_date,\n        currency: \"EUR\",\n        payment_terms: \"30 days net\",\n        delivery: { date: row.issue_date },\n        seller,\n        buyer: {\n          name: row.customer_name,\n          address: { line1: row.customer_street, city: row.customer_city, postcode: row.customer_postcode, country: \"IE\" },\n          contact: { email: row.customer_email },\n        },\n        payment: { means_code: \"30\", remittance_information: number, credit_transfers: [bank] },\n        lines: [],\n      },\n      customer_email: row.customer_email,\n      row_numbers: [],\n    });\n  }\n\n  invoices.get(number).row_numbers.push(row.row_number);\n\n  invoices.get(number).invoice.lines.push({\n    quantity: String(row.quantity),\n    unit: row.unit || \"EA\",\n    price: { net: Number(row.unit_price).toFixed(2) },\n    tax: { category: \"S\", rate: String(row.vat_rate) },\n    item: { name: row.item, description: row.description || undefined },\n  });\n}\n\nreturn [...invoices.values()].map((json) => ({ json }));\n"
+        "jsCode": "// Turns the sheet's rows (one row per invoice line) into one item per invoice, in the\n// EN 16931 invoice model the gallery's invoice templates read. Only rows with status \"ready\".\n// Stops before anything is rendered or sent if a ready row is incomplete.\n\nconst details = $('Set your business details').first().json;\nconst seller = {\n  name: details.seller_name,\n  vat_id: details.seller_vat_id,\n  address: {\n    line1: details.seller_street,\n    city: details.seller_city,\n    postcode: details.seller_postcode,\n    country: details.seller_country,\n  },\n  contact: { name: details.seller_contact_name, email: details.seller_email },\n};\nconst bank = { account_id: details.iban, account_name: details.seller_name, bic: details.bic };\n\nconst required = ['invoice_number', 'issue_date', 'due_date', 'customer_name', 'customer_email', 'item', 'quantity', 'unit_price', 'vat_rate'];\nconst isoDate = /^\\d{4}-\\d{2}-\\d{2}$/;\nconst problems = [];\n\nconst invoices = new Map();\nfor (const { json: row } of $input.all()) {\n  if (String(row.status).trim().toLowerCase() !== 'ready') continue;\n\n  const missing = required.filter((field) => String(row[field] ?? '').trim() === '');\n  if (missing.length) problems.push(`row ${row.row_number}: ${missing.join(', ')} empty`);\n  for (const field of ['issue_date', 'due_date']) {\n    if (row[field] && !isoDate.test(String(row[field]))) {\n      problems.push(`row ${row.row_number}: ${field} \"${row[field]}\" is not YYYY-MM-DD (format the column as plain text)`);\n    }\n  }\n  for (const field of ['quantity', 'unit_price', 'vat_rate']) {\n    if (row[field] !== '' && !Number.isFinite(Number(row[field]))) {\n      problems.push(`row ${row.row_number}: ${field} \"${row[field]}\" is not a number`);\n    }\n  }\n  if (problems.length) continue;\n\n  const number = String(row.invoice_number).trim();\n  if (!invoices.has(number)) {\n    invoices.set(number, {\n      invoice: {\n        number,\n        issue_date: row.issue_date,\n        due_date: row.due_date,\n        currency: details.currency,\n        payment_terms: details.payment_terms,\n        delivery: { date: row.issue_date },\n        seller,\n        buyer: {\n          name: row.customer_name,\n          address: {\n            line1: row.customer_street,\n            city: row.customer_city,\n            postcode: row.customer_postcode,\n            country: details.customer_country,\n          },\n          contact: { email: row.customer_email },\n        },\n        payment: { means_code: '30', remittance_information: number, credit_transfers: [bank] },\n        lines: [],\n      },\n      customer_email: row.customer_email,\n      row_numbers: [],\n    });\n  }\n\n  invoices.get(number).row_numbers.push(row.row_number);\n\n  invoices.get(number).invoice.lines.push({\n    quantity: String(row.quantity),\n    unit: row.unit || 'EA',\n    price: { net: Number(row.unit_price).toFixed(2) },\n    tax: { category: 'S', rate: String(row.vat_rate) },\n    item: { name: row.item, description: row.description || undefined },\n  });\n}\n\nif (problems.length) {\n  throw new Error(`Nothing was sent. Fix these rows first: ${problems.join('; ')}`);\n}\n\nreturn [...invoices.values()].map((json) => ({ json }));\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
+        780,
         0
       ],
-      "name": "Group lines into invoices"
+      "name": "Group lines into invoices",
+      "id": "245e6386-bd82-4972-95a6-cb54f4a05664"
     },
     {
       "parameters": {
@@ -74,7 +267,7 @@
       "type": "@dynamic-document-api/n8n-nodes-dynamic-document-api.dynamicDocumentApi",
       "typeVersion": 1,
       "position": [
-        672,
+        1040,
         0
       ],
       "name": "Create a PDF from a template",
@@ -83,14 +276,15 @@
           "id": "",
           "name": "Dynamic Document account"
         }
-      }
+      },
+      "id": "61722d80-a991-4f7b-8d04-39867f426be5"
     },
     {
       "parameters": {
         "sendTo": "={{ $('Group lines into invoices').item.json.customer_email }}",
-        "subject": "=Invoice {{ $('Group lines into invoices').item.json.invoice.number }} from Brambleworth Design Studio",
+        "subject": "=Invoice {{ $('Group lines into invoices').item.json.invoice.number }} from {{ $('Set your business details').first().json.seller_name }}",
         "emailType": "text",
-        "message": "=Hello {{ $('Group lines into invoices').item.json.invoice.buyer.name }},\n\nplease find attached invoice {{ $('Group lines into invoices').item.json.invoice.number }}.\n\nKind regards\nBrambleworth Design Studio",
+        "message": "=Hello {{ $('Group lines into invoices').item.json.invoice.buyer.name }},\n\nplease find attached invoice {{ $('Group lines into invoices').item.json.invoice.number }}.\n\nKind regards\n{{ $('Set your business details').first().json.seller_name }}",
         "options": {
           "attachmentsUi": {
             "attachmentsBinary": [
@@ -102,7 +296,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        896,
+        1300,
         0
       ],
       "name": "Email the invoice",
@@ -111,7 +305,8 @@
           "id": "",
           "name": "Gmail account"
         }
-      }
+      },
+      "id": "6811d926-7846-40ad-8dc8-230afbdcac66"
     },
     {
       "parameters": {
@@ -120,10 +315,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
+        1560,
         0
       ],
-      "name": "List rows to mark as sent"
+      "name": "List rows to mark as sent",
+      "id": "e4ba3a5d-c7a3-4e8b-acfa-17c654a2cab8"
     },
     {
       "parameters": {
@@ -315,7 +511,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        1344,
+        1820,
         0
       ],
       "name": "Mark rows as sent",
@@ -324,11 +520,23 @@
           "id": "",
           "name": "Google Sheets account"
         }
-      }
+      },
+      "id": "709691bb-36f3-46fe-b959-bcfa626a3f06"
     }
   ],
   "connections": {
     "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Set your business details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set your business details": {
       "main": [
         [
           {
