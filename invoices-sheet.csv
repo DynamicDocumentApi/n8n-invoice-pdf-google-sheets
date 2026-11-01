@@ -1,0 +1,7 @@
+invoice_number,issue_date,due_date,customer_name,customer_email,customer_street,customer_city,customer_postcode,item,description,quantity,unit,unit_price,vat_rate,status
+INV-2026-101,2026-11-03,2026-12-03,Harbour & Pine Café,accounts@harbourpine.example.com,12 Quay Street,Galway,H91 E2K7,Website maintenance,"Monthly plan: updates, backups, uptime checks",1,MON,240.00,23,ready
+INV-2026-101,2026-11-03,2026-12-03,Harbour & Pine Café,accounts@harbourpine.example.com,12 Quay Street,Galway,H91 E2K7,Menu redesign,Four seasonal menu cards,4,EA,85.00,23,ready
+INV-2026-102,2026-11-03,2026-12-03,Lindley Bikes Ltd,billing@lindleybikes.example.com,8 Mill Road,Cork,T12 R2C4,Product photography,Half-day studio shoot,1,DAY,650.00,23,ready
+INV-2026-102,2026-11-03,2026-12-03,Lindley Bikes Ltd,billing@lindleybikes.example.com,8 Mill Road,Cork,T12 R2C4,Image retouching,Per edited photo,30,EA,12.50,23,ready
+INV-2026-102,2026-11-03,2026-12-03,Lindley Bikes Ltd,billing@lindleybikes.example.com,8 Mill Road,Cork,T12 R2C4,Travel,Return train to the studio,1,EA,96.00,23,ready
+INV-2026-103,2026-11-04,2026-12-04,Moreau Architects,accounts@moreau.example.com,27 Merrion Square,Dublin,D02 F653,Brochure layout,24-page project brochure,1,EA,1200.00,23,draft

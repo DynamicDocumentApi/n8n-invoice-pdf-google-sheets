@@ -1,0 +1,401 @@
+{
+  "name": "Invoice PDFs from Google Sheets",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Invoices"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Invoices"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "name": "Read invoice rows",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node, mode \"Run Once for All Items\".\n// Turns the sheet's rows (one row per invoice line) into one item per invoice, in the\n// EN 16931 invoice model the gallery's invoice templates read. Only rows with status \"ready\".\n\nconst seller = {\n  name: \"Brambleworth Design Studio\",\n  vat_id: \"IE1234567T\",\n  address: { line1: \"Unit 4, Tannery Yard\", city: \"Dublin\", postcode: \"D08 VF8H\", country: \"IE\" },\n  contact: { name: \"Accounts team\", email: \"accounts@brambleworth.example.com\" },\n};\nconst bank = { account_id: \"IE29AIBK93115212345678\", account_name: seller.name, bic: \"AIBKIE2D\" };\n\nconst invoices = new Map();\nfor (const { json: row } of $input.all()) {\n  if (String(row.status).trim().toLowerCase() !== \"ready\") continue;\n\n  const number = String(row.invoice_number).trim();\n  if (!invoices.has(number)) {\n    invoices.set(number, {\n      invoice: {\n        number,\n        issue_date: row.issue_date,\n        due_date: row.due_date,\n        currency: \"EUR\",\n        payment_terms: \"30 days net\",\n        delivery: { date: row.issue_date },\n        seller,\n        buyer: {\n          name: row.customer_name,\n          address: { line1: row.customer_street, city: row.customer_city, postcode: row.customer_postcode, country: \"IE\" },\n          contact: { email: row.customer_email },\n        },\n        payment: { means_code: \"30\", remittance_information: number, credit_transfers: [bank] },\n        lines: [],\n      },\n      customer_email: row.customer_email,\n      row_numbers: [],\n    });\n  }\n\n  invoices.get(number).row_numbers.push(row.row_number);\n\n  invoices.get(number).invoice.lines.push({\n    quantity: String(row.quantity),\n    unit: row.unit || \"EA\",\n    price: { net: Number(row.unit_price).toFixed(2) },\n    tax: { category: \"S\", rate: String(row.vat_rate) },\n    item: { name: row.item, description: row.description || undefined },\n  });\n}\n\nreturn [...invoices.values()].map((json) => ({ json }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "name": "Group lines into invoices"
+    },
+    {
+      "parameters": {
+        "template": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Bold brand invoice (PDF)"
+        },
+        "dataMode": "json",
+        "dataJson": "={{ { invoice: $json.invoice } }}",
+        "pdfOptions": {},
+        "options": {
+          "fileName": "={{ $json.invoice.number }}.pdf"
+        }
+      },
+      "type": "@dynamic-document-api/n8n-nodes-dynamic-document-api.dynamicDocumentApi",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "name": "Create a PDF from a template",
+      "credentials": {
+        "dynamicDocumentApiApi": {
+          "id": "",
+          "name": "Dynamic Document account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Group lines into invoices').item.json.customer_email }}",
+        "subject": "=Invoice {{ $('Group lines into invoices').item.json.invoice.number }} from Brambleworth Design Studio",
+        "emailType": "text",
+        "message": "=Hello {{ $('Group lines into invoices').item.json.invoice.buyer.name }},\n\nplease find attached invoice {{ $('Group lines into invoices').item.json.invoice.number }}.\n\nKind regards\nBrambleworth Design Studio",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        0
+      ],
+      "name": "Email the invoice",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// One item per sheet row of the invoices that were emailed, for the update step.\nreturn $('Group lines into invoices').all().flatMap((invoice) =>\n  invoice.json.row_numbers.map((row_number) => ({ json: { row_number, status: 'sent' } })),\n);\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "name": "List rows to mark as sent"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Invoices"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Invoices"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "invoice_number",
+              "displayName": "invoice_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "issue_date",
+              "displayName": "issue_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "due_date",
+              "displayName": "due_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "customer_street",
+              "displayName": "customer_street",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "customer_city",
+              "displayName": "customer_city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "customer_postcode",
+              "displayName": "customer_postcode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "item",
+              "displayName": "item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "quantity",
+              "displayName": "quantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "unit",
+              "displayName": "unit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "unit_price",
+              "displayName": "unit_price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "vat_rate",
+              "displayName": "vat_rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        0
+      ],
+      "name": "Mark rows as sent",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Read invoice rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read invoice rows": {
+      "main": [
+        [
+          {
+            "node": "Group lines into invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Group lines into invoices": {
+      "main": [
+        [
+          {
+            "node": "Create a PDF from a template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a PDF from a template": {
+      "main": [
+        [
+          {
+            "node": "Email the invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email the invoice": {
+      "main": [
+        [
+          {
+            "node": "List rows to mark as sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List rows to mark as sent": {
+      "main": [
+        [
+          {
+            "node": "Mark rows as sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
